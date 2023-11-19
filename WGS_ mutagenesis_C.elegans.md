@@ -50,21 +50,18 @@ bwa index Caenorhabditis_elegans.WBcel235.dna.toplevel.fa.gz
 # Step 5. Allign the reads to the reference genome
 module load bwa
 
-for f1 in fastq/*1_001.trimmed.fastq.gz
-do f2=${f1%%1_001.trimmed.fastq.gz}"2_001.trimmed.fastq.gz"
-f3=${f1%%_S*trimmed.fastq.gz}""
-echo $f3
-bwa mem ../reference_genome/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa.gz $f1 $f2 > $f3_align.bam
-done
+bwa mem reference_genome/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa.gz fastq/177115-trimmed.mate1.fastq.gz fastq/177115-trimmed.mate2.fastq.gz > 177115_align.bam
+bwa mem reference_genome/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa.gz fastq/177120-trimmed.mate1.fastq.gz fastq/177120-trimmed.mate2.fastq.gz > 177120_align.bam
+
 
 
 # Step 6. Sort and index BAM files
 module load samtools 
 
-for f1 in fastq/*_align.bam
-do f3=${f1%%_S*trimmed.fastq.gz}""
-samtools sort -T temp -O bam -o $f3_align_sorted.bam $f1
-samtools index $f3_align_sorted.bam
+for f1 in *_align.bam
+do f3=${f1%%_align.bam}"_align_sorted.bam"
+samtools sort -T temp -O bam -o $f3 $f1
+samtools index $f3
 done
 
 samtools sort -T temp -O bam -o 177120_align_sorted.bam 177120_align.bam
@@ -72,3 +69,34 @@ samtools sort -T temp -O bam -o 177115_align_sorted.bam 177115_align.bam
 
 samtools index 177120_align_sorted.bam
 samtools index 177115_align_sorted.bam
+
+for f1 in *_align.bam
+do echo $f1
+f3=${f1%%_align.bam}"_align_sorted.bam"
+echo $f3
+done
+
+# Step 7. Remove Duplicates
+module load picard/2.27.5
+module load samtools
+
+for f1 in *align_sorted.bam
+do f2=${f1%%_align_sorted.bam}"_align_sorted_deletedup_metrics.txt"
+f3=${f1%%_align_sorted.bam}"_align_sorted_deletedup.bam"
+java -jar $PICARD MarkDuplicates VALIDATION_STRINGENCY=LENIENT REMOVE_DUPLICATES=TRUE I=$f1 O=$f3 M=$f2
+samtools index $f3
+done
+
+# Step 8. Asssign Read Group to reads in each file
+module load picard/2.27.5
+
+java -jar $PICARD AddOrReplaceReadGroups I=177115_align_sorted_deletedup.bam O=177115_align_sorted_deletedup_header.bam RGID=0 RGSM=177115 RGLB=unknown RGPL=ILLUMINA RGPU=unknown
+java -jar $PICARD AddOrReplaceReadGroups I=177120_align_sorted_deletedup.bam O=177120_align_sorted_deletedup_header.bam RGID=1 RGSM=177120 RGLB=unknown RGPL=ILLUMINA RGPU=unknown
+
+# check that the groups were assigned: 
+samtools view -H  177120_align_sorted_deletedup_header.bam
+
+# Step 9. Variant calling 
+module load python/3.6 
+
+mimodd varcall ../reference_genome/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa 177115_align_sorted_deletedup.bam 177120_align_sorted_deletedup.bam -o 177115_177120_calls_deletedup.bcf --verbose
