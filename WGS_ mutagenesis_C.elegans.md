@@ -93,10 +93,39 @@ module load picard/2.27.5
 java -jar $PICARD AddOrReplaceReadGroups I=177115_align_sorted_deletedup.bam O=177115_align_sorted_deletedup_header.bam RGID=0 RGSM=177115 RGLB=unknown RGPL=ILLUMINA RGPU=unknown
 java -jar $PICARD AddOrReplaceReadGroups I=177120_align_sorted_deletedup.bam O=177120_align_sorted_deletedup_header.bam RGID=1 RGSM=177120 RGLB=unknown RGPL=ILLUMINA RGPU=unknown
 
+java -jar $PICARD AddOrReplaceReadGroups I=177115__align_mimodd_sorted.bam O=177115_align_mimodd_sorted_deletedup_header.bam RGID=0 RGSM=177115 RGLB=unknown RGPL=ILLUMINA RGPU=unknown
+java -jar $PICARD AddOrReplaceReadGroups I=177120__align_mimodd_sorted.bam O=177120_align_mimodd_sorted_deletedup_header.bam RGID=1 RGSM=177120 RGLB=unknown RGPL=ILLUMINA RGPU=unknown
+
 # check that the groups were assigned: 
 samtools view -H  177120_align_sorted_deletedup_header.bam
 
 # Step 9. Variant calling 
 module load python/3.6 
 
-mimodd varcall ../reference_genome/Caenorhabditis_elegans.WBcel235.dna.toplevel.fa 177115_align_sorted_deletedup.bam 177120_align_sorted_deletedup.bam -o 177115_177120_calls_deletedup.bcf --verbose
+mimodd varcall ../reference_genome/mimodd_Caenorhabditis_elegans.WBcel235.dna.toplevel.fa 177115_align_mimodd_sorted_deletedup_header.bam 177120_align_mimodd_sorted_deletedup_header.bam -o 177115_177120_mimodd_calls_deletedup.bcf --verbose
+
+# Step 10. Variants extraction
+module load python/3.6 
+
+for f1 in *_mimodd_calls_deletedup.bcf
+do f3=${f1%%_mimodd_calls_deletedup.bcf}"_mimodd_calls_deletedup.vcf"
+mimodd varextract $f1 -o $f3
+done
+
+# Step 11. Variant filtering. 
+
+mimodd vcf-filter 177115_177120_mimodd_calls_deletedup.vcf -s 177115 177120 --dp 10 10 -o 177115_177120_mimodd_variants_dp10.vcf
+
+# Step 12. VAC mapping
+
+mimodd map VAC 177115_177120_mimodd_variants_dp10.vcf -m 177115 -c 177120 -o 177115_177120_calls_deletedup_dp10_linkage_VAC.txt -p 177115_177120_calls_deletedup_dp10_linkage_VAC.pdf --no-scatter
+
+# Copy to computer 
+
+scp -r elashman@bea81.hpc.ista.ac.at:/nfs/scistore13/bonogrp/elashman/Documents/Thanh_DNAseq/*txt /Users/elashman/Documents
+scp -r elashman@bea81.hpc.ista.ac.at:/nfs/scistore13/bonogrp/elashman/Documents/Thanh_DNAseq/*pdf /Users/elashman/Documents
+
+# Step 13. Identify the causative mutation using mapping information
+mimodd vcf-filter -r I%20dna:chromosome%20chromosome:WBcel235:I:1:15072434:1%20REF:7000000-8000000 -o 177115_177120_peak_variants.vcf 177115_177120_mimodd_variants_dp10.vcf
+
+
