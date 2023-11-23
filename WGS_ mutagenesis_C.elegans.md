@@ -127,5 +127,6 @@ scp -r elashman@bea81.hpc.ista.ac.at:/nfs/scistore13/bonogrp/elashman/Documents/
 
 # Step 13. Identify the causative mutation using mapping information
 mimodd vcf-filter 177115_177120_mimodd_variants_dp10.vcf --region I%20dna:chromosome%20chromosome:WBcel235:I:1:15072434:1%20REF:5500000-9500000 --sample 177115 177120 --gt 1/1 0/0 -o 177115_177120_peak_variants.vcf
+scp -r elashman@bea81.hpc.ista.ac.at:/nfs/scistore13/bonogrp/elashman/Documents/Thanh_DNAseq/177115_177120_peak_variants.vcf  /Users/elashman/Documents/
 
 
