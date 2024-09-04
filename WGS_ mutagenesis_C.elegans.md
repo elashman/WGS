@@ -17,16 +17,7 @@ scp -r elashman@bea81.hpc.ista.ac.at:/nfs/scistore13/bonogrp/elashman/Documents/
 
 module load bbmap
 
-for f1 in *1_001.fastq.gz 
-do f2=${f1%%1_001.fastq.gz}"2_001.fastq.gz" 
-bbduk.sh threads=8 in1=$f1 in2=$f2 out1=fastq/$(basename $f1 .fastq.gz).trimmed.fastq.gz out2=fastq/$(basename $f2 .fastq.gz).trimmed.fastq.gz ref=../reference_genome/bbduk-fasta.fa ktrim=r k=23 mink=11 hdist=1 tpe tbo qtrim=rl trimq=15 
-done
-
-
-for f1 in *1_001.fastq.gz 
-do f2=${f1%%1_001.fastq.gz}"2_001.fastq.gz" 
-bbduk.sh threads=8 in1=$f1 in2=$f2 out1=fastq/$(basename $f1 .fastq.gz).trimmed.fastq.gz out2=fastq/$(basename $f2 .fastq.gz).trimmed.fastq.gz ref=../reference_genome/bbduk-fasta.fa ktrim=r k=23 mink=11 hdist=1 tpe tbo qtrim=rl trimq=15
-done
+for f1 in *R1_001.fastq.gz; do f2=${f1%%1_001.fastq.gz}"2_001.fastq.gz"; bbduk.sh threads=8 in1=$f1 in2=$f2 out1=${f1%%.fastq.gz}.trimmed.fastq.gz out2=${f2%%.fastq.gz}.trimmed.fastq.gz ref=../../reference_genome/bbduk-fasta.fa ktrim=r k=23 mink=11 hdist=1 tpe tbo qtrim=rl trimq=15 ; done
 
 for f1 in fastq/*.trimmed.fastq.gz 
 
